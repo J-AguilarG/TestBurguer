@@ -5,6 +5,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
+import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/burgers")
@@ -24,29 +26,40 @@ public class BurgerController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Burger> getById(@PathVariable UUID id) {
-        return repository.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+public ResponseEntity<?> getById(@PathVariable UUID id) {
+    Optional<Burger> burger = repository.findById(id);
+
+    if (burger.isPresent()) {
+        return ResponseEntity.ok(burger.get());
+    } else {
+        return ResponseEntity.status(404).body(Map.of("error", "Burger no encontrada con ese ID"));
     }
+}
 
     @PutMapping("/{id}")
-    public ResponseEntity<Burger> update(@PathVariable UUID id, @RequestBody Burger details) {
-        return repository.findById(id).map(burger -> {
+    public ResponseEntity<?> update(@PathVariable UUID id, @RequestBody Burger details) {
+        Optional<Burger> burgerOptional = repository.findById(id);
+
+        if (burgerOptional.isPresent()) {
+            Burger burger = burgerOptional.get();
             burger.setNom(details.getNom());
             burger.setDescription(details.getDescription());
             burger.setPrix(details.getPrix());
             burger.setDisponible(details.getDisponible());
+            
             return ResponseEntity.ok(repository.save(burger));
-        }).orElse(ResponseEntity.notFound().build());
-    }
+        } else {
+            return ResponseEntity.status(404).body(Map.of("error", "No se puede actualizar: Burger no encontrada"));
+        }
+}
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+    public ResponseEntity<?> delete(@PathVariable UUID id) {
         if (repository.existsById(id)) {
             repository.deleteById(id);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok(Map.of("mensaje", "Burger eliminada correctamente"));
+        } else {
+            return ResponseEntity.status(404).body(Map.of("error", "No se puede eliminar: Burger no encontrada"));
         }
-        return ResponseEntity.notFound().build();
-    }
+}
 }
